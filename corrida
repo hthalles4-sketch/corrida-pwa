@@ -1,0 +1,172 @@
+corrida-pwa/
+│── index.html
+│── manifest.json
+│── service-worker.js
+│── icon-192.png
+│── icon-512.png
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Vale a Pena a Corrida?</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a73e8">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 15px;
+    }
+    h1 {
+      color: #1a73e8;
+      text-align: center;
+    }
+    .box {
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    label {
+      font-weight: bold;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 8px;
+      margin: 6px 0 12px 0;
+    }
+    button {
+      background: #1a73e8;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    .ok { color: green; font-weight: bold; }
+    .no { color: red; font-weight: bold; }
+  </style>
+</head>
+
+<body>
+
+<h1>🚗 Vale a Pena a Corrida?</h1>
+
+<div class="box">
+  <label>Aplicativo</label>
+  <select id="app">
+    <option>Uber</option>
+    <option>99</option>
+  </select>
+
+  <label>Ganho bruto (R$)</label>
+  <input type="number" id="ganho" step="0.01">
+
+  <label>Distância (km)</label>
+  <input type="number" id="dist" step="0.1">
+
+  <label>Tempo (min)</label>
+  <input type="number" id="tempo">
+</div>
+
+<div class="box">
+  <label>Consumo (km/l)</label>
+  <input type="number" id="consumo" value="12">
+
+  <label>Preço combustível (R$/l)</label>
+  <input type="number" id="comb" value="5.80">
+
+  <label>Manutenção (R$/km)</label>
+  <input type="number" id="manut" value="0.40">
+
+  <label>Depreciação (R$/km)</label>
+  <input type="number" id="deprec" value="0.30">
+</div>
+
+<button onclick="calcular()">Calcular</button>
+
+<div class="box" id="resultado"></div>
+
+<script>
+function calcular() {
+  let ganho = parseFloat(ganho.value);
+  let dist = parseFloat(dist.value);
+  let tempo = parseFloat(tempo.value) / 60;
+  let consumo = parseFloat(consumo.value);
+  let comb = parseFloat(comb.value);
+  let manut = parseFloat(manut.value);
+  let deprec = parseFloat(deprec.value);
+
+  let custoComb = (dist / consumo) * comb;
+  let custoManut = dist * manut;
+  let custoDeprec = dist * deprec;
+  let custoTotal = custoComb + custoManut + custoDeprec;
+  let lucro = ganho - custoTotal;
+
+  let lucroKm = lucro / dist;
+  let lucroHora = lucro / tempo;
+
+  let ok = lucroKm >= 1.8 && lucroHora >= 25;
+
+  resultado.innerHTML = `
+    <h3 class="${ok ? 'ok' : 'no'}">
+      ${ok ? '✅ Vale a pena' : '❌ Não vale a pena'}
+    </h3>
+    <p><strong>Lucro:</strong> R$ ${lucro.toFixed(2)}</p>
+    <p>⛽ Combustível: R$ ${custoComb.toFixed(2)}</p>
+    <p>🔧 Manutenção: R$ ${custoManut.toFixed(2)}</p>
+    <p>📉 Depreciação: R$ ${custoDeprec.toFixed(2)}</p>
+    <p><strong>R$/km:</strong> ${lucroKm.toFixed(2)}</p>
+    <p><strong>R$/hora:</strong> ${lucroHora.toFixed(2)}</p>
+  `;
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js');
+}
+</script>
+
+</body>
+</html>
+{
+  "name": "Vale a Pena a Corrida",
+  "short_name": "Corrida",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1a73e8",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+const CACHE_NAME = "corrida-pwa-v1";
+const FILES = [
+  "./",
+  "./index.html",
+  "./manifest.json"
+];
+
+self.addEventListener("install", event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(FILES))
+  );
+});
+
+self.addEventListener("fetch", event => {
+  event.respondWith(
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request);
+    })
+  );
+});
